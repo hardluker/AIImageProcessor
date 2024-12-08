@@ -27,30 +27,59 @@ class MainAgent:
 
 
 def update_screen(agent):
+    """
+    Captures the screen continuously, updates the agent's current image in both
+    BGR and HSV formats, and reports FPS periodically.
+
+    Args:
+        agent (object): An instance of the MainAgent class.
+    """
     print("Starting computer vision screen update...")
-    dsp = display.Display()
-    screen = dsp.screen()
-    width = screen.width_in_pixels
-    height = screen.height_in_pixels
-    print("Detected display resolution: " + str(width) + " x " + str(height))
 
+    # Try to determine screen resolution
+    try:
+        screen = ImageGrab.grab()
+        width, height = screen.size
+        print("Detected display resolution: {} x {}".format(width, height))
+    except Exception as e:
+        print(f"Error detecting screen resolution: {e}")
+        return
 
+    # Initialize timing variables
     loop_time = time.time()
     fps_print_time = time.time()
-    while True:
-        screenshot = ImageGrab.grab()
-        screenshot = np.array(screenshot)
-        screenshot = cv.cvtColor(screenshot, cv.COLOR_RGB2BGR)
-        screenshotHSV = cv.cvtColor(screenshot, cv.COLOR_BGR2HSV)
-        agent.cur_img = screenshot
-        agent.cur_imgHSV = screenshotHSV
 
-        cur_time = time.time()
-        if cur_time - fps_print_time >= FPS_REPORT_DELAY:
-            print('FPS: {}'.format(1 / (cur_time - loop_time)))
-            fps_print_time = cur_time
-        loop_time = cur_time
-        cv.waitKey(1)
+    while True:
+        try:
+            # Capture screen
+            screenshot = ImageGrab.grab()
+            screenshot = np.array(screenshot)
+
+            # Convert color formats
+            screenshot = cv.cvtColor(screenshot, cv.COLOR_RGB2BGR)
+            screenshotHSV = cv.cvtColor(screenshot, cv.COLOR_BGR2HSV)
+
+            # Update agent's current images
+            agent.cur_img = screenshot
+            agent.cur_imgHSV = screenshotHSV
+
+            # Calculate and print FPS periodically
+            cur_time = time.time()
+            if cur_time - fps_print_time >= FPS_REPORT_DELAY:
+                fps = 1 / (cur_time - loop_time)
+                print('FPS: {:.2f}'.format(fps))
+                fps_print_time = cur_time
+
+            loop_time = cur_time
+
+            # Allow OpenCV to process events (necessary for OpenCV functions)
+            if cv.waitKey(1) == ord('q'):
+                print("Exiting screen update loop.")
+                break
+
+        except Exception as e:
+            print(f"Error during screen update: {e}")
+            break
 
 def print_menu():
     print('Enter a command:')
